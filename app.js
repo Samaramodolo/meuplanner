@@ -60,9 +60,6 @@ function renderApp() {
 
     // Update navigation
     updateNavigation();
-
-    // Setup content listeners
-    setupContentListeners();
 }
 
 // ============ MINHA AGENDA ============
@@ -734,6 +731,10 @@ async function handleLogout() {
 
 function setupEventListeners() {
     document.getElementById("floatingBtn").addEventListener("click", showFloatingMenu);
+}
+
+function setupContentListeners() {
+    // Listeners já estão nos elementos
 }
 
 // Inicializar o aplicativo

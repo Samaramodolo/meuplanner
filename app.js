@@ -736,6 +736,5 @@ function setupEventListeners() {
     document.getElementById("floatingBtn").addEventListener("click", showFloatingMenu);
 }
 
-function setupContentListeners() {
-    // Listeners já estão nos elementos
-}
+// Inicializar o aplicativo
+initApp();

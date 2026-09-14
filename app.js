@@ -56,7 +56,10 @@ function renderApp() {
         content.innerHTML = renderGestao();
     } else if (currentArea === "masya") {
         content.innerHTML = renderMASYA();
-    
+    }
+
+    // Update navigation
+    updateNavigation();
 }
 
 // ============ MINHA AGENDA ============
@@ -724,13 +727,11 @@ async function handleLogout() {
         await logout();
         window.location.href = "index.html";
     }
+}
+
 function setupEventListeners() {
     document.getElementById("floatingBtn").addEventListener("click", showFloatingMenu);
 }
 
 // Inicializar o planner
-initApp();
-}
-
-// Inicializar o aplicativo
 initApp();

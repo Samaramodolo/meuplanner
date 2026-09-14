@@ -724,14 +724,12 @@ async function handleLogout() {
         await logout();
         window.location.href = "index.html";
     }
-}
-
 function setupEventListeners() {
     document.getElementById("floatingBtn").addEventListener("click", showFloatingMenu);
 }
 
-function setupContentListeners() {
-    // Listeners já estão nos elementos
+// Inicializar o planner
+initApp();
 }
 
 // Inicializar o aplicativo

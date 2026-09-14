@@ -56,10 +56,7 @@ function renderApp() {
         content.innerHTML = renderGestao();
     } else if (currentArea === "masya") {
         content.innerHTML = renderMASYA();
-    }
-
-    // Update navigation
-    updateNavigation();
+    
 }
 
 // ============ MINHA AGENDA ============

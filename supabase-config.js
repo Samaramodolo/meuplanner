@@ -1,112 +1,99 @@
 // =====================================================
-// LÓGICA DE AUTENTICAÇÃO (VERSÃO MELHORADA)
+// CONFIGURAÇÃO DO SUPABASE (VERSÃO MELHORADA)
 // =====================================================
 
-// Verificar se usuário está logado com retry
-async function checkAuth() {
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    console.log("checkAuth - Usuário:", user?.email || "não autenticado");
-    return user;
-  } catch (error) {
-    console.error("Erro ao verificar autenticação:", error.message);
-    return null;
+const SUPABASE_URL = "https://yjldccipruugghifgvws.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_jYKpCaLeJuiKoXBdKVcmBQ_e4xr9m9w";
+
+// Inicializar cliente Supabase
+let supabaseClient = null;
+let supabaseReady = false;
+let sessionLoaded = false;
+const supabaseReadyCallbacks = [];
+
+// Notificar callbacks quando Supabase estiver pronto
+function onSupabaseReady(callback) {
+  if (supabaseReady) {
+    callback();
+  } else {
+    supabaseReadyCallbacks.push(callback);
   }
 }
 
-// Fazer login
-async function login(email, password) {
+// Função para inicializar Supabase quando a biblioteca estiver pronta
+function initializeSupabase() {
+  if (supabaseReady) {
+    return; // Já foi inicializado
+  }
+
+  if (!window.supabase) {
+    console.error("Biblioteca Supabase não foi carregada ainda");
+    setTimeout(initializeSupabase, 100); // Tenta novamente
+    return;
+  }
+
   try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email: email,
-      password: password
-    });
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    window.supabaseClient = supabaseClient;
+    supabaseReady = true;
+    console.log("Supabase inicializado com sucesso");
 
-    if (error) {
-      console.error("Erro ao fazer login:", error.message);
-      return { success: false, error: error.message };
-    }
+    // Aguardar que a sessão seja carregada do localStorage
+    loadSessionAndRunCallbacks();
+  } catch (error) {
+    console.error("Erro ao inicializar Supabase:", error);
+    setTimeout(initializeSupabase, 500); // Tenta novamente em mais tempo
+  }
+}
 
-    // Salvar que fez login
-    localStorage.setItem("userLoggedIn", "true");
-    localStorage.setItem("userEmail", email);
-    console.log("Login bem-sucedido para:", email);
+// Aguardar carregamento da sessão
+async function loadSessionAndRunCallbacks() {
+  try {
+    // Dar tempo para Supabase carregar a sessão
+    console.log("Aguardando carregamento de sessão do Supabase...");
     
-    return { success: true, user: data.user };
-  } catch (error) {
-    console.error("Erro durante login:", error.message);
-    return { success: false, error: error.message };
-  }
-}
+    for (let i = 0; i < 10; i++) {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        console.log("Sessão carregada! Usuário:", user.email);
+        sessionLoaded = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
-// Fazer registro/signup
-async function signup(email, password) {
-  try {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: email,
-      password: password
+    sessionLoaded = true;
+    console.log("Pronto para executar callbacks de Supabase");
+
+    // Executar todos os callbacks pendentes
+    supabaseReadyCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (e) {
+        console.error("Erro ao executar callback de Supabase:", e);
+      }
     });
-
-    if (error) {
-      console.error("Erro ao fazer registro:", error.message);
-      return { success: false, error: error.message };
-    }
-
-    console.log("Signup bem-sucedido para:", email);
-    return { success: true, user: data.user };
   } catch (error) {
-    console.error("Erro durante signup:", error.message);
-    return { success: false, error: error.message };
+    console.error("Erro ao carregar sessão:", error);
+    // Mesmo com erro, executar callbacks para não travar
+    sessionLoaded = true;
+    supabaseReadyCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (e) {
+        console.error("Erro ao executar callback de Supabase:", e);
+      }
+    });
   }
 }
 
-// Fazer logout
-async function logout() {
-  try {
-    const { error } = await supabaseClient.auth.signOut();
-
-    if (error) {
-      console.error("Erro ao fazer logout:", error.message);
-      return { success: false, error: error.message };
-    }
-
-    // Limpar dados locais
-    localStorage.removeItem("userLoggedIn");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("lastArea");
-    localStorage.removeItem("lastTab");
-
-    console.log("Logout bem-sucedido");
-    return { success: true };
-  } catch (error) {
-    console.error("Erro durante logout:", error.message);
-    return { success: false, error: error.message };
-  }
+// Tentar inicializar imediatamente
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeSupabase);
+} else {
+  initializeSupabase();
 }
 
-// Redirecionar se não está logado - COM RETRY
-async function requireAuth() {
-  console.log("requireAuth iniciado...");
-  
-  // Tentar verificar autenticação múltiplas vezes
-  for (let i = 0; i < 5; i++) {
-    const user = await checkAuth();
-
-    if (user) {
-      console.log("✓ Autenticação confirmada para:", user.email);
-      return user;
-    }
-
-    console.log(`Tentativa ${i + 1}/5 - Usuário não encontrado, aguardando...`);
-    
-    if (i < 4) {
-      // Aguardar antes de tentar novamente
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-  }
-
-  // Se chegou aqui, não está autenticado
-  console.error("✗ Usuário não autenticado após 5 tentativas, redirecionando para login");
-  window.location.href = "index.html";
-  return false;
-}
+// Tentar inicializar também após um pequeno delay
+setTimeout(initializeSupabase, 100);
+setTimeout(initializeSupabase, 500);

@@ -732,6 +732,171 @@ async function handleLogout() {
 function setupEventListeners() {
     document.getElementById("floatingBtn").addEventListener("click", showFloatingMenu);
 }
+// ============ GOOGLE CALENDAR SYNC FUNCTIONS ============
+const VERCEL_API_URL = 'https://seu-projeto.vercel.app/api/google-calendar';
 
+async function syncTaskToGoogle(task) {
+  try {
+    if (!task.id) {
+      console.warn('Cannot sync task without ID');
+      return;
+    }
+
+    const isUpdate = !!task.googleEventId;
+
+    const payload = {
+      action: isUpdate ? 'update' : 'add',
+      task: {
+        id: task.id,
+        titulo: task.titulo || 'Sem título',
+        descricao: task.descricao || '',
+        dataVencimento: task.dataVencimento || new Date().toISOString(),
+        categoria: task.categoria || 'Sem categoria',
+        googleEventId: task.googleEventId,
+      }
+    };
+
+    console.log(`[Google Calendar] ${isUpdate ? 'Updating' : 'Creating'} event:`, payload.task.titulo);
+
+    const response = await fetch(VERCEL_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      console.error('[Google Calendar] Sync failed:', data.error);
+      return false;
+    }
+
+    if (data.eventId && !isUpdate) {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ googleEventId: data.eventId })
+        .eq('id', task.id);
+
+      if (error) {
+        console.error('[Google Calendar] Failed to store Event ID:', error);
+      } else {
+        console.log('[Google Calendar] Event synced. ID:', data.eventId);
+      }
+    } else {
+      console.log('[Google Calendar] Event updated successfully');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[Google Calendar] Sync error:', error);
+    return false;
+  }
+}
+
+async function deleteTaskFromGoogle(googleEventId) {
+  if (!googleEventId) {
+    console.warn('[Google Calendar] No event ID to delete');
+    return;
+  }
+
+  try {
+    console.log('[Google Calendar] Deleting event:', googleEventId);
+
+    const response = await fetch(VERCEL_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete',
+        task: { googleEventId }
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      console.log('[Google Calendar] Event deleted successfully');
+      return true;
+    } else {
+      console.error('[Google Calendar] Delete failed:', data.error);
+      return false;
+    }
+  } catch (error) {
+    console.error('[Google Calendar] Delete error:', error);
+    return false;
+  }
+}
+
+async function updateTaskWithSync(taskId, updates) {
+  try {
+    const { data: currentTask, error: fetchError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .single();
+
+    if (fetchError) {
+      console.error('Failed to fetch task:', fetchError);
+      return null;
+    }
+
+    const { data: updatedTask, error: updateError } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Failed to update task:', updateError);
+      return null;
+    }
+
+    const taskToSync = {
+      ...updatedTask,
+      googleEventId: currentTask.googleEventId
+    };
+    await syncTaskToGoogle(taskToSync);
+
+    return updatedTask;
+  } catch (error) {
+    console.error('Error updating task:', error);
+    return null;
+  }
+}
+
+async function deleteTaskWithSync(taskId) {
+  try {
+    const { data: task, error: fetchError } = await supabase
+      .from('tasks')
+      .select('googleEventId')
+      .eq('id', taskId)
+      .single();
+
+    if (fetchError) {
+      console.error('Failed to fetch task:', fetchError);
+      return false;
+    }
+
+    if (task.googleEventId) {
+      await deleteTaskFromGoogle(task.googleEventId);
+    }
+
+    const { error: deleteError } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
+
+    if (deleteError) {
+      console.error('Failed to delete task:', deleteError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    return false;
+  }
+}
+// ============ END GOOGLE CALENDAR SYNC FUNCTIONS ============
 // Inicializar o planner
 initApp();

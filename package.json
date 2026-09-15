@@ -1,0 +1,12 @@
+{
+  "name": "meu-planner-api",
+  "version": "1.0.0",
+  "description": "Google Calendar integration for Meu Planner",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel"
+  },
+  "dependencies": {
+    "googleapis": "^118.0.0"
+  }
+}

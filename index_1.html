@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Planner - Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #FAFAF8 0%, #F5F3F0 100%);
+            color: #4A4A48;
+        }
+
+        .auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .auth-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4A4A48;
+        }
+
+        .auth-header p {
+            font-size: 14px;
+            color: #8A8A88;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #4A4A48;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #E5E5E3;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #D4A5A5;
+            box-shadow: 0 0 0 3px rgba(212, 165, 165, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: #4A4A48;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary:hover {
+            background-color: #3A3A38;
+        }
+
+        .btn-secondary {
+            background-color: #F8E8E8;
+            color: #4A4A48;
+            border: 1px solid #E5E5E3;
+        }
+
+        .btn-secondary:hover {
+            background-color: #F0E0E0;
+        }
+
+        .error-message {
+            color: #E8A8A8;
+            font-size: 12px;
+            margin-bottom: 16px;
+            padding: 10px;
+            background-color: #FEFBF8;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #8A8A88;
+        }
+
+        .toggle-form button {
+            background: none;
+            border: none;
+            color: #D4A5A5;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 12px;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 30px 20px;
+            }
+
+            .auth-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Meu Planner</h1>
+                <p>Organize seu dia, sua vida</p>
+            </div>
+
+            <div id="loginForm">
+                <div class="error-message" id="errorMessage"></div>
+
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+
+                <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">Entrar</button>
+
+                <div class="toggle-form">
+                    Não tem conta? <button type="button" onclick="toggleForm()">Criar</button>
+                </div>
+            </div>
+
+            <div id="signupForm" style="display: none;">
+                <div class="error-message" id="errorMessageSignup"></div>
+
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" placeholder="seu@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupPassword">Senha (mín. 6 caracteres)</label>
+                    <input type="password" id="signupPassword" placeholder="••••••••" required>
+                </div>
+
+                <button class="btn btn-primary" id="signupBtn" onclick="handleSignup()">Criar Conta</button>
+
+                <div class="toggle-form">
+                    Já tem conta? <button type="button" onclick="toggleForm()">Entrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="supabase-config-UNIFIED.js"></script>
+    <script src="auth.js"></script>
+
+    <script>
+        // Verificar se já está logado
+        async function checkAlreadyLoggedIn() {
+            const user = await checkAuth();
+            if (user) {
+                window.location.href = "app.html";
+            }
+        }
+
+        // Toggle entre login e signup
+        function toggleForm() {
+            document.getElementById("loginForm").style.display =
+                document.getElementById("loginForm").style.display === "none" ? "block" : "none";
+            document.getElementById("signupForm").style.display =
+                document.getElementById("signupForm").style.display === "none" ? "block" : "none";
+        }
+
+        // Handle login
+        async function handleLogin() {
+            const email = document.getElementById("loginEmail").value.trim();
+            const password = document.getElementById("loginPassword").value;
+            const btn = document.getElementById("loginBtn");
+            const errorDiv = document.getElementById("errorMessage");
+
+            if (!email || !password) {
+                showError(errorDiv, "Preencha email e senha");
+                return;
+            }
+
+            btn.classList.add("loading");
+            btn.textContent = "Entrando...";
+
+            const result = await login(email, password);
+
+            if (result.success) {
+                window.location.href = "app.html";
+            } else {
+                showError(errorDiv, result.error || "Erro ao fazer login");
+                btn.classList.remove("loading");
+                btn.textContent = "Entrar";
+            }
+        }
+
+        // Handle signup
+        async function handleSignup() {
+            const email = document.getElementById("signupEmail").value.trim();
+            const password = document.getElementById("signupPassword").value;
+            const btn = document.getElementById("signupBtn");
+            const errorDiv = document.getElementById("errorMessageSignup");
+
+            if (!email || !password) {
+                showError(errorDiv, "Preencha email e senha");
+                return;
+            }
+
+            if (password.length < 6) {
+                showError(errorDiv, "Senha deve ter no mínimo 6 caracteres");
+                return;
+            }
+
+            btn.classList.add("loading");
+            btn.textContent = "Criando...";
+
+            const result = await signup(email, password);
+
+            if (result.success) {
+                showError(errorDiv, "Conta criada! Agora faça login.", false);
+                document.getElementById("signupEmail").value = "";
+                document.getElementById("signupPassword").value = "";
+                setTimeout(() => toggleForm(), 1500);
+            } else {
+                showError(errorDiv, result.error || "Erro ao criar conta");
+                btn.classList.remove("loading");
+                btn.textContent = "Criar Conta";
+            }
+        }
+
+        // Mostrar erro
+        function showError(element, message, isError = true) {
+            element.textContent = message;
+            element.classList.toggle("show", true);
+            if (isError) {
+                element.style.color = "#E8A8A8";
+            } else {
+                element.style.color = "#90C695";
+            }
+        }
+
+        // Enter key para submit
+        document.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                if (document.getElementById("loginForm").style.display !== "none") {
+                    handleLogin();
+                } else {
+                    handleSignup();
+                }
+            }
+        });
+
+        // Verificar autenticação ao carregar
+        checkAlreadyLoggedIn();
+    </script>
+</body>
+</html>
